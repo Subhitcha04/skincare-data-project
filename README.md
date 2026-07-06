@@ -184,7 +184,7 @@ CDC classified: **9,891 inserts**, **44,166 updates**, **0 no-ops**
 
 ## Tech Stack
 
-Python · PostgreSQL · MongoDB · Pandas · SQLAlchemy · scikit-learn · librosa · Tesseract OCR · Whisper · REST APIs · RSS feeds · Power BI *(planned)*
+Python · PostgreSQL · MongoDB · Pandas · SQLAlchemy · scikit-learn · librosa · Tesseract OCR · Whisper · REST APIs · RSS feeds · Power BI 
 
 ---
 
