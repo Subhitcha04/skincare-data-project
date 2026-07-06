@@ -44,3 +44,4 @@ logs/
 
 # EDA plots (regenerable)
 eda_*.png
+GlowCheck_Dashboard.pbix
