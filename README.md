@@ -170,7 +170,7 @@ openFDA's API hard-caps skip-based pagination at 25,000 records. High-volume ter
 
 ## Dashboard
 
-![GlowCheck Power BI Dashboard](assets/powerbi_dashboard_screenshot.png)
+![GlowCheck Power BI Dashboard](powerbi_dashboard_screenshot.png)
 | Table | Rows | Load Type |
 |---|---|---|
 | adverse_events | 53,462 | Incremental + CDC |
