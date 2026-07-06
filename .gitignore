@@ -1,0 +1,46 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Raw data — too large for GitHub
+raw/text/*.xml
+raw/images/*.jpg
+raw/images/*.png
+raw/audio_video/*.mp3
+raw/audio_video/*.mp4
+raw/structured/*.json
+raw/structured/cosing_export.csv
+
+# Processed data — regenerable
+processed/*.parquet
+staging/*.parquet
+
+# Keep manifest and watermark files
+!raw/images/manifest.csv
+!raw/audio_video/podcast_manifest.csv
+!raw/audio_video/youtube_manifest.csv
+!raw/structured/_openfda_watermark.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log
+logs/
+
+# EDA plots (regenerable)
+eda_*.png

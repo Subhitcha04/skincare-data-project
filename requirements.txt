@@ -1,0 +1,35 @@
+# --- core ---
+requests>=2.31
+python-dotenv>=1.0
+pandas>=2.2
+numpy>=1.26
+tqdm>=4.66
+
+# --- text ---
+nltk>=3.8
+scikit-learn>=1.4
+umap-learn>=0.5
+lxml>=5.2
+beautifulsoup4>=4.12
+
+# --- images ---
+pillow>=10.3
+opencv-python-headless>=4.9
+pytesseract>=0.3.10
+# CLIP embeddings (optional, heavier install)
+ftfy>=6.2
+open-clip-torch>=2.24
+
+# --- audio/video ---
+librosa>=0.10
+soundfile>=0.12
+feedparser>=6.0
+openai-whisper>=20231117
+youtube-transcript-api>=0.6
+google-api-python-client>=2.130
+
+# --- structured / DB ---
+sqlalchemy>=2.0
+psycopg2-binary>=2.9
+pymysql>=1.1
+pymongo>=4.7
