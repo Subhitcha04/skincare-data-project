@@ -1,0 +1,128 @@
+# GlowCheck — CI/CD Pipeline
+# Triggers on push to any branch and on pull requests to main
+# Runs: unit tests → lint → transform validation → notify
+
+name: GlowCheck Data Pipeline CI
+
+on:
+  push:
+    branches: ["**"]          # every branch
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+
+  # ── Job 1: Unit Tests ──────────────────────────────────────
+  unit-tests:
+    name: Unit Tests — Transformation Logic
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest pytest-cov pandas numpy
+
+      - name: Run unit tests with coverage
+        run: |
+          pytest tests/test_transform.py -v \
+            --tb=short \
+            --cov=. \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # ── Job 2: Lint ────────────────────────────────────────────
+  lint:
+    name: Code Quality — Flake8 + Black
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install linters
+        run: pip install flake8 black
+
+      - name: Run flake8 (syntax + style)
+        run: |
+          flake8 scripts/ tests/ \
+            --max-line-length=100 \
+            --ignore=E501,W503 \
+            --exclude=__pycache__,.git,venv
+
+      - name: Check formatting with black
+        run: |
+          black --check --diff scripts/ tests/ \
+            --line-length 100
+
+  # ── Job 3: Transform Validation ───────────────────────────
+  transform-validation:
+    name: Pipeline Validation — Mock ETL Run
+    runs-on: ubuntu-latest
+    needs: unit-tests        # only runs if tests pass
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install pipeline dependencies
+        run: |
+          pip install pandas numpy requests python-dotenv
+
+      - name: Run transform validation script
+        run: python tests/validate_transform.py
+
+      - name: Verify output files
+        run: |
+          python -c "
+          import os, sys
+          required = ['tests/validate_transform.py', 'tests/test_transform.py']
+          missing = [f for f in required if not os.path.exists(f)]
+          if missing:
+              print('MISSING FILES:', missing)
+              sys.exit(1)
+          print('All required files present')
+          "
+
+  # ── Job 4: Notify on Success ───────────────────────────────
+  notify:
+    name: Pipeline Status Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, lint, transform-validation]
+    if: always()
+
+    steps:
+      - name: Print summary
+        run: |
+          echo "======================================"
+          echo "GlowCheck CI Pipeline Summary"
+          echo "======================================"
+          echo "Unit Tests      : ${{ needs.unit-tests.result }}"
+          echo "Lint            : ${{ needs.lint.result }}"
+          echo "Transform Valid : ${{ needs.transform-validation.result }}"
+          echo "======================================"
+          echo "Branch : ${{ github.ref_name }}"
+          echo "Commit : ${{ github.sha }}"
+          echo "Actor  : ${{ github.actor }}"
