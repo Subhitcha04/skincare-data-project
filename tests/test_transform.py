@@ -4,6 +4,7 @@ Run: pytest tests/test_transform.py -v
 Tests cover: cleansing, standardization, joining, CDC classification,
              schema validation, null checks, outlier detection
 """
+
 import pytest
 import pandas as pd
 import numpy as np
@@ -19,28 +20,32 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # ════════════════════════════════════════════════════════════
 
 SYNONYM_MAP = {
-    "vitamin c":    "ascorbic acid",
-    "vit c":        "ascorbic acid",
-    "retinol":      "vitamin a",
-    "aha":          "alpha hydroxy acid",
+    "vitamin c": "ascorbic acid",
+    "vit c": "ascorbic acid",
+    "retinol": "vitamin a",
+    "aha": "alpha hydroxy acid",
 }
+
 
 def standardize_name(name: str) -> str:
     return SYNONYM_MAP.get(name.lower().strip(), name.lower().strip())
 
+
 def compute_risk_weight(regulatory_status: str) -> float:
     mapping = {
-        "banned":     1.0,
+        "banned": 1.0,
         "restricted": 0.8,
-        "unknown":    0.4,
-        "allowed":    0.1,
+        "unknown": 0.4,
+        "allowed": 0.1,
     }
     return mapping.get(str(regulatory_status).lower().strip(), 0.4)
+
 
 def compute_product_risk(ingredient_weights: list) -> float:
     if not ingredient_weights:
         return 0.0
     return round(sum(ingredient_weights) / len(ingredient_weights), 4)
+
 
 def classify_cdc(incoming: dict, existing: dict) -> str:
     if existing is None:
@@ -50,14 +55,17 @@ def classify_cdc(incoming: dict, existing: dict) -> str:
     else:
         return "noop"
 
+
 def validate_schema(df: pd.DataFrame, required_cols: list) -> tuple:
     missing = set(required_cols) - set(df.columns)
     return len(missing) == 0, list(missing)
+
 
 def validate_nulls(df: pd.DataFrame, key_cols: list) -> tuple:
     null_counts = {c: int(df[c].isnull().sum()) for c in key_cols if c in df.columns}
     passed = all(v == 0 for v in null_counts.values())
     return passed, null_counts
+
 
 def validate_outliers(df: pd.DataFrame, rules: dict) -> list:
     warnings = []
@@ -69,11 +77,14 @@ def validate_outliers(df: pd.DataFrame, rules: dict) -> list:
                 warnings.append(f"{out} outliers in '{col}' outside [{lo},{hi}]")
     return warnings
 
+
 def clean_text(text: str) -> str:
     import re
+
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text.lower()
+
 
 def parse_ingredients(text: str) -> list:
     for sep in [",", ";", "\n", "|"]:
@@ -183,11 +194,13 @@ class TestCDCClassification:
         assert classify_cdc(record, record) == "noop"
 
     def test_cdc_on_dataframe(self):
-        incoming = pd.DataFrame([
-            {"pmid": "1", "abstract_length": 200},
-            {"pmid": "2", "abstract_length": 150},
-            {"pmid": "3", "abstract_length": 300},
-        ])
+        incoming = pd.DataFrame(
+            [
+                {"pmid": "1", "abstract_length": 200},
+                {"pmid": "2", "abstract_length": 150},
+                {"pmid": "3", "abstract_length": 300},
+            ]
+        )
         existing = {
             "1": {"pmid": "1", "abstract_length": 200},  # unchanged
             "2": {"pmid": "2", "abstract_length": 999},  # changed
@@ -201,7 +214,7 @@ class TestCDCClassification:
 
         assert results.count("insert") == 1
         assert results.count("update") == 1
-        assert results.count("noop")   == 1
+        assert results.count("noop") == 1
 
 
 # ════════════════════════════════════════════════════════════
@@ -210,8 +223,9 @@ class TestCDCClassification:
 class TestSchemaValidation:
 
     def test_valid_schema_passes(self):
-        df = pd.DataFrame({"pmid": ["1"], "ingredient_term": ["niacinamide"],
-                           "abstract_length": [200]})
+        df = pd.DataFrame(
+            {"pmid": ["1"], "ingredient_term": ["niacinamide"], "abstract_length": [200]}
+        )
         passed, missing = validate_schema(df, ["pmid", "ingredient_term", "abstract_length"])
         assert passed is True
         assert missing == []
@@ -228,8 +242,7 @@ class TestSchemaValidation:
         assert passed is True
 
     def test_extra_columns_do_not_fail(self):
-        df = pd.DataFrame({"pmid": ["1"], "extra_col": ["x"],
-                           "ingredient_term": ["niacinamide"]})
+        df = pd.DataFrame({"pmid": ["1"], "extra_col": ["x"], "ingredient_term": ["niacinamide"]})
         passed, _ = validate_schema(df, ["pmid", "ingredient_term"])
         assert passed is True
 
@@ -281,14 +294,19 @@ class TestOutlierDetection:
         assert len(warnings) == 1
 
     def test_multiple_columns_checked(self):
-        df = pd.DataFrame({
-            "abstract_length": [100, 9999],
-            "event_count":     [1, -5],
-        })
-        warnings = validate_outliers(df, {
-            "abstract_length": (1, 5000),
-            "event_count":     (0, 1000),
-        })
+        df = pd.DataFrame(
+            {
+                "abstract_length": [100, 9999],
+                "event_count": [1, -5],
+            }
+        )
+        warnings = validate_outliers(
+            df,
+            {
+                "abstract_length": (1, 5000),
+                "event_count": (0, 1000),
+            },
+        )
         assert len(warnings) == 2
 
 
@@ -358,32 +376,41 @@ class TestIngredientParsing:
 class TestTransformPipeline:
 
     def test_full_cosing_transform(self):
-        raw = pd.DataFrame({
-            "INCI name":   ["Niacinamide", "Vitamin C", "Mercury"],
-            "Restriction": ["allowed",     "unknown",   "banned"],
-            "Function":    ["conditioning","antioxidant","none"],
-        })
-        raw = raw.rename(columns={
-            "INCI name":   "inci_name",
-            "Restriction": "regulatory_status",
-            "Function":    "function",
-        })
-        raw["inci_name_std"]  = raw["inci_name"].apply(standardize_name)
-        raw["risk_weight"]    = raw["regulatory_status"].apply(compute_risk_weight)
+        raw = pd.DataFrame(
+            {
+                "INCI name": ["Niacinamide", "Vitamin C", "Mercury"],
+                "Restriction": ["allowed", "unknown", "banned"],
+                "Function": ["conditioning", "antioxidant", "none"],
+            }
+        )
+        raw = raw.rename(
+            columns={
+                "INCI name": "inci_name",
+                "Restriction": "regulatory_status",
+                "Function": "function",
+            }
+        )
+        raw["inci_name_std"] = raw["inci_name"].apply(standardize_name)
+        raw["risk_weight"] = raw["regulatory_status"].apply(compute_risk_weight)
 
-        assert raw.loc[raw["inci_name"]=="Niacinamide", "risk_weight"].values[0] == 0.1
-        assert raw.loc[raw["inci_name"]=="Vitamin C",   "risk_weight"].values[0] == 0.4
-        assert raw.loc[raw["inci_name"]=="Mercury",     "risk_weight"].values[0] == 1.0
-        assert raw.loc[raw["inci_name"]=="Vitamin C",   "inci_name_std"].values[0] == "ascorbic acid"
+        assert raw.loc[raw["inci_name"] == "Niacinamide", "risk_weight"].values[0] == 0.1
+        assert raw.loc[raw["inci_name"] == "Vitamin C", "risk_weight"].values[0] == 0.4
+        assert raw.loc[raw["inci_name"] == "Mercury", "risk_weight"].values[0] == 1.0
+        assert (
+            raw.loc[raw["inci_name"] == "Vitamin C", "inci_name_std"].values[0] == "ascorbic acid"
+        )
 
     def test_product_risk_pipeline(self):
         product_ingredients = ["niacinamide", "vitamin c", "mercury"]
-        weights = [compute_risk_weight(
-            {"niacinamide":"allowed","vitamin c":"unknown","mercury":"banned"}[i]
-        ) for i in product_ingredients]
+        weights = [
+            compute_risk_weight(
+                {"niacinamide": "allowed", "vitamin c": "unknown", "mercury": "banned"}[i]
+            )
+            for i in product_ingredients
+        ]
         risk_score = compute_product_risk(weights)
         assert risk_score == pytest.approx((0.1 + 0.4 + 1.0) / 3, rel=1e-4)
-        assert risk_score > 0.4   # mercury pulls it up
+        assert risk_score > 0.4  # mercury pulls it up
 
     def test_cdc_full_batch(self):
         incoming_batch = [
@@ -395,8 +422,7 @@ class TestTransformPipeline:
             "B": {"id": "B", "val": 999},
             "C": {"id": "C", "val": 300},
         }
-        results = {r["id"]: classify_cdc(r, existing_db.get(r["id"]))
-                   for r in incoming_batch}
+        results = {r["id"]: classify_cdc(r, existing_db.get(r["id"])) for r in incoming_batch}
         assert results["A"] == "insert"
         assert results["B"] == "update"
         assert results["C"] == "noop"

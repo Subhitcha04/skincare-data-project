@@ -3,6 +3,7 @@ Mock ETL Validation Script
 Runs a mini end-to-end transform without any DB connection.
 Used in CI to verify transform logic on every push.
 """
+
 import pandas as pd
 
 print("=" * 50)
@@ -13,16 +14,16 @@ SYNONYM_MAP = {"vitamin c": "ascorbic acid", "retinol": "vitamin a"}
 RISK_MAP = {"banned": 1.0, "restricted": 0.8, "unknown": 0.4, "allowed": 0.1}
 
 # 1. Mock raw CosIng data
-raw = pd.DataFrame({
-    "inci_name": ["Niacinamide", "Vitamin C", "Mercury", "Retinol"],
-    "regulatory_status": ["allowed", "unknown", "banned", "restricted"],
-    "function": ["conditioning", "antioxidant", "none", "anti-aging"],
-})
+raw = pd.DataFrame(
+    {
+        "inci_name": ["Niacinamide", "Vitamin C", "Mercury", "Retinol"],
+        "regulatory_status": ["allowed", "unknown", "banned", "restricted"],
+        "function": ["conditioning", "antioxidant", "none", "anti-aging"],
+    }
+)
 
 # 2. Standardize
-raw["inci_name_std"] = raw["inci_name"].str.lower().map(
-    lambda x: SYNONYM_MAP.get(x, x)
-)
+raw["inci_name_std"] = raw["inci_name"].str.lower().map(lambda x: SYNONYM_MAP.get(x, x))
 raw["risk_weight"] = raw["regulatory_status"].map(RISK_MAP)
 
 # 3. Validate
