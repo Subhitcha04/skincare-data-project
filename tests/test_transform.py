@@ -4,7 +4,7 @@ Run: pytest tests/test_transform.py -v
 Tests cover: cleansing, standardization, joining, CDC classification,
              schema validation, null checks, outlier detection
 """
-
+# CI/CD: This file is automatically run by GitHub Actions on every push
 import pytest
 import pandas as pd
 import numpy as np
